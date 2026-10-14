@@ -1,0 +1,1446 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Build your MAD-K: choose frame size, flight stack, cameras, VTX, C2 link and GPS. See price and NDAA status as you go.">
+<title>MAD-K Configurator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=IBM+Plex+Mono:wght@400;500&family=Krona+One&family=Oswald:wght@500;600&display=swap">
+<style>
+/* Layout: Tesla-style split. Sticky 3D stage on the left, scrolling build panel on the right,
+   price + quote button pinned to the foot of the panel. Each data-style is its own committed look. */
+:root{
+  --bg:#0b1220; --panel:#0d1525; --stage-1:#24304a; --stage-2:#0b1220; --fg:#f3f5f7; --muted:#9aa5b4;
+  --line:rgba(255,255,255,.12); --card:rgba(255,255,255,.025); --card-hover:rgba(255,255,255,.06);
+  --sel:#f78d28; --sel-bg:rgba(247,141,40,.08); --cta:#f78d28; --cta-fg:#0b1220; --hi:rgba(21,255,247,.28);
+  --ok:#1b7a43; --bad:#c13a3a; --badge-fg:#ffffff; --input:rgba(255,255,255,.04);
+  --font-display:"Trump Gothic West W01 Bold","Oswald","Arial Narrow",sans-serif; --display-weight:600; --display-case:uppercase; --display-track:.01em;
+  --font-eyebrow:"Tactic Sans Extra Extended","Krona One","Arial Black",sans-serif;
+  --font-body:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --font-data:"DM Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --radius:3px; --anod:#f78d28; --shadow:.55; --grid:transparent;
+  color-scheme:dark;
+}
+:root[data-style="clean"]{
+  --bg:#ffffff; --panel:#ffffff; --stage-1:#f7f7f8; --stage-2:#e6e7e9; --fg:#171a20; --muted:#5c5e62;
+  --line:#e1e2e4; --card:#ffffff; --card-hover:#f6f6f7; --sel:#358387; --sel-bg:rgba(53,131,135,.06);
+  --cta:#0b1220; --cta-fg:#ffffff; --hi:transparent; --ok:#1b7a43; --bad:#b8322f; --input:#f4f4f5;
+  --font-display:"DM Sans",system-ui,sans-serif; --display-weight:500; --display-case:none; --display-track:-.01em;
+  --font-eyebrow:"DM Sans",system-ui,sans-serif;
+  --radius:8px; --anod:#b8bec6; --shadow:.28; --grid:transparent;
+  color-scheme:light;
+}
+:root[data-style="tactical"]{
+  --bg:#0c0e0b; --panel:#10130e; --stage-1:#1d2319; --stage-2:#0c0e0b; --fg:#dde3d3; --muted:#8e977f;
+  --line:#2a3125; --card:#13170f; --card-hover:#191e14; --sel:#5ee6dc; --sel-bg:rgba(94,230,220,.06);
+  --cta:#f78d28; --cta-fg:#0c0e0b; --hi:rgba(94,230,220,.22); --ok:#2a7d3f; --bad:#b83a32; --input:#0f120c;
+  --font-display:"Barlow Condensed","Arial Narrow",sans-serif; --display-weight:600; --display-case:uppercase; --display-track:.04em;
+  --font-eyebrow:"IBM Plex Mono",ui-monospace,monospace;
+  --font-data:"IBM Plex Mono",ui-monospace,monospace;
+  --radius:0px; --anod:#4b5240; --shadow:.6; --grid:rgba(94,230,220,.05);
+  color-scheme:dark;
+}
+
+[hidden]{display:none!important}
+html,body{height:100%}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--font-body);-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--sel);outline-offset:2px}
+.app{display:grid;grid-template-rows:auto minmax(0,1fr);height:100%}
+
+/* top bar */
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:10px 24px;border-bottom:1px solid var(--line);background:var(--bg)}
+.brand{font-family:var(--font-display);font-weight:var(--display-weight);text-transform:uppercase;letter-spacing:.06em;font-size:1.25rem;line-height:1;color:var(--fg);text-decoration:none;display:flex;flex-direction:column}
+:root[data-style="clean"] .brand{font-weight:700;letter-spacing:.12em;font-size:.95rem}
+.style-pick{display:flex;align-items:center;gap:8px;font-size:.8rem}
+.style-pick .lbl{color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-size:.7rem}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:var(--radius);overflow:hidden}
+.seg button{border:0;background:transparent;padding:6px 12px;cursor:pointer;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-checked="true"]{background:var(--sel-bg);color:var(--fg);box-shadow:inset 0 -2px 0 var(--sel)}
+.seg button:disabled{opacity:.4;cursor:not-allowed}
+
+/* main split */
+.main{display:grid;grid-template-columns:minmax(0,1fr) 440px;min-height:0}
+.stage{position:relative;min-height:0;overflow:hidden;
+  background:
+    linear-gradient(var(--grid) 1px,transparent 1px) 0 0/40px 40px,
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/40px 40px,
+    radial-gradient(120% 90% at 50% 42%,var(--stage-1),var(--stage-2))}
+#c3d{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+#c3d:active{cursor:grabbing}
+.placeholder{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);padding:72px 24px 84px}
+.placeholder svg{width:min(560px,100%);height:auto;max-height:100%}
+.stage-top{position:absolute;left:0;right:0;top:0;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:20px 24px;pointer-events:none}
+.stage-title{font-family:var(--font-display);font-weight:var(--display-weight);text-transform:var(--display-case);letter-spacing:var(--display-track);font-size:clamp(1.6rem,3vw,2.6rem);line-height:1;display:flex;gap:.3em;align-items:baseline}
+.stage-title .sz{color:var(--sel)}
+:root[data-style="site"] .stage-title .sz,:root:not([data-style]) .stage-title .sz{color:var(--sel)}
+.build-badge{display:flex;align-items:center;gap:8px;padding:8px 12px;border-radius:var(--radius);font-weight:700;font-size:.78rem;letter-spacing:.08em;text-transform:uppercase;color:var(--badge-fg);line-height:1.2;text-align:right}
+.build-badge svg{flex:none;width:18px;height:18px}
+.build-badge.ok{background:var(--ok)} .build-badge.bad{background:var(--bad)}
+.build-badge small{display:block;font-weight:500;letter-spacing:.02em;text-transform:none;font-size:.75rem;opacity:.92}
+.stage-foot{position:absolute;left:0;right:0;bottom:0;display:flex;flex-direction:column;align-items:center;gap:8px;padding:16px}
+.views{display:inline-flex;border:1px solid var(--line);border-radius:var(--radius);background:color-mix(in srgb,var(--bg) 70%,transparent);backdrop-filter:blur(6px);overflow:hidden}
+.views button{border:0;background:transparent;padding:7px 14px;cursor:pointer;color:var(--muted);font-size:.8rem}
+.views button+button{border-left:1px solid var(--line)}
+.views button:hover{color:var(--fg)}
+.hint{margin:0;font-size:.75rem;color:var(--muted);transition:opacity .6s}
+.hint.gone{opacity:0}
+.loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--muted);font-size:.85rem;pointer-events:none}
+.loading span{display:flex;align-items:center;gap:10px}
+.spin{width:16px;height:16px;border:2px solid var(--line);border-top-color:var(--sel);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* panel */
+.panel{display:flex;flex-direction:column;min-height:0;border-left:1px solid var(--line);background:var(--panel)}
+.panel-body{flex:1;overflow-y:auto;padding:32px 32px 40px;display:grid;gap:44px;align-content:start}
+.intro{display:grid;gap:14px}
+.eyebrow{margin:0;font-family:var(--font-eyebrow);font-style:italic;font-size:.72rem;letter-spacing:.32em;text-transform:uppercase}
+:root[data-style="clean"] .eyebrow{font-style:normal;letter-spacing:.14em;color:var(--muted);font-weight:500}
+:root[data-style="tactical"] .eyebrow{font-style:normal;letter-spacing:.18em;color:var(--sel)}
+.eyebrow b{position:relative;font-weight:inherit}
+.eyebrow b::after{content:"";position:absolute;left:-4px;right:0;top:66%;height:8px;background:var(--hi)}
+h1{margin:0;font-family:var(--font-display);font-weight:var(--display-weight);text-transform:var(--display-case);letter-spacing:var(--display-track);font-size:clamp(2.6rem,4.4vw,3.6rem);line-height:.95;text-wrap:balance}
+h1 sup{font-size:.35em;vertical-align:top;margin-left:2px}
+.lede{margin:0;color:var(--muted)}
+.facts{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin:6px 0 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.facts div{padding:12px 0;display:grid;gap:2px;min-width:0}
+.facts div+div{padding-left:14px;border-left:1px solid var(--line)}
+.facts dt{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.facts dd{margin:0;font-family:var(--font-data);font-weight:500;font-variant-numeric:tabular-nums;font-size:.95rem;overflow-wrap:anywhere}
+
+.ndaa-switch{position:relative;display:flex;align-items:center;gap:12px;padding:12px 14px;border:1px solid var(--line);border-radius:var(--radius);background:var(--card);cursor:pointer}
+.ndaa-switch input{position:absolute;opacity:0;width:1px;height:1px}
+.sw{flex:none;width:38px;height:22px;border-radius:22px;background:var(--line);position:relative;transition:background .2s}
+.sw::after{content:"";position:absolute;left:3px;top:3px;width:16px;height:16px;border-radius:50%;background:var(--fg);transition:transform .2s}
+.ndaa-switch input:checked+.sw,.toggle input:checked+.sw{background:var(--ok)}
+.ndaa-switch input:checked+.sw::after,.toggle input:checked+.sw::after{transform:translateX(16px);background:#fff}
+.ndaa-switch input:focus-visible+.sw,.toggle input:focus-visible+.sw{outline:2px solid var(--sel);outline-offset:2px}
+.ndaa-switch strong{display:block;font-weight:500}
+.ndaa-switch small{display:block;color:var(--muted);font-size:.8rem}
+
+/* sections */
+.sec{display:grid;gap:14px;scroll-margin-top:16px}
+.sec-head{display:grid;gap:4px}
+.sec h2,.summary h2{margin:0;font-family:var(--font-display);font-weight:var(--display-weight);text-transform:var(--display-case);letter-spacing:var(--display-track);font-size:1.7rem;line-height:1.05}
+:root[data-style="clean"] .sec h2,:root[data-style="clean"] .summary h2{font-size:1.35rem}
+.sec-sub{margin:0;color:var(--muted);font-size:.88rem;max-width:60ch}
+.slot{font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;color:var(--muted);margin:4px 0 -4px}
+.opts{display:grid;gap:8px}
+.opts.sizes{grid-template-columns:repeat(4,minmax(0,1fr))}
+.opt{position:relative;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 14px;width:100%;text-align:left;padding:13px 14px;border:1px solid var(--line);background:var(--card);border-radius:var(--radius);cursor:pointer;transition:border-color .15s,background-color .15s}
+.opt:hover{background:var(--card-hover)}
+.opt[aria-checked="true"]{border-color:var(--sel);box-shadow:inset 0 0 0 1px var(--sel);background:var(--sel-bg)}
+.opt[aria-disabled="true"]{cursor:not-allowed}
+.opt[aria-disabled="true"] .opt-main,.opt[aria-disabled="true"] .opt-side{opacity:.42}
+.opt-main{min-width:0}
+.opt-name{font-weight:500}
+.opt-note{display:block;color:var(--muted);font-size:.84rem}
+.opt-side{display:flex;align-items:center;gap:10px;justify-content:flex-end}
+.opt-price{font-family:var(--font-data);font-variant-numeric:tabular-nums;font-size:.88rem;min-width:62px;text-align:right}
+.opt-why{grid-column:1/-1;font-size:.78rem;color:var(--muted)}
+.opt.size{grid-template-columns:1fr;text-align:center;padding:14px 6px;gap:2px}
+.opt.size .opt-name{font-family:var(--font-display);font-weight:var(--display-weight);font-size:1.5rem;line-height:1;text-transform:var(--display-case)}
+:root[data-style="clean"] .opt.size .opt-name{font-size:1.2rem}
+.opt.size .opt-price{min-width:0;text-align:center;color:var(--muted);font-size:.82rem}
+.badge{display:inline-block;padding:2px 7px;font-size:.66rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;border-radius:2px;color:var(--badge-fg);line-height:1.5;white-space:nowrap;font-family:var(--font-body)}
+.badge.ok{background:var(--ok)} .badge.bad{background:var(--bad)}
+.badge.na{background:transparent;color:var(--muted);border:1px solid var(--line)}
+.sub{display:grid;gap:8px;padding-top:4px}
+.sub-row{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.sub-label{font-size:.88rem}
+.fw-note{margin:0;font-size:.78rem;color:var(--muted)}
+.fw-price{font-family:var(--font-data);font-variant-numeric:tabular-nums;color:var(--muted);font-size:.85em}
+.seg button[aria-checked="true"] .fw-price{color:inherit}
+.toggle{position:relative;display:flex;align-items:center;gap:12px;cursor:pointer;padding:4px 0}
+.toggle input{position:absolute;opacity:0;width:1px;height:1px}
+.toggle.disabled{cursor:not-allowed;opacity:.5}
+.toggle span:last-child{display:grid}
+.toggle small{color:var(--muted);font-size:.8rem}
+
+/* summary */
+.summary{display:grid;gap:16px;padding-top:28px;border-top:1px solid var(--line)}
+.ndaa-box{display:flex;gap:12px;align-items:flex-start;padding:14px;border-radius:var(--radius);color:var(--badge-fg)}
+.ndaa-box.ok{background:var(--ok)} .ndaa-box.bad{background:var(--bad)}
+.ndaa-box svg{flex:none;width:22px;height:22px;margin-top:1px}
+.ndaa-box strong{display:block;letter-spacing:.06em;text-transform:uppercase;font-size:.85rem}
+.ndaa-box p{margin:2px 0 0;font-size:.85rem}
+.lines{width:100%;border-collapse:collapse;font-size:.88rem}
+.lines td,.lines th{padding:9px 0;border-bottom:1px solid var(--line);vertical-align:top;text-align:left;font-weight:400}
+.lines .cat{display:block;font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.lines .b{width:1%;padding:9px 12px;white-space:nowrap;text-align:right}
+.lines .p{width:1%;white-space:nowrap;text-align:right;font-family:var(--font-data);font-variant-numeric:tabular-nums}
+.lines tfoot th,.lines tfoot td{border-bottom:0;padding-top:14px;font-weight:700;font-size:1rem}
+.code-row{margin:0;font-size:.8rem;color:var(--muted);display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
+.code-row code{font-family:"IBM Plex Mono",ui-monospace,monospace;color:var(--fg);font-size:.78rem;word-break:break-all}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+
+/* buttons */
+.btn{position:relative;display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 20px;border-radius:var(--radius);border:1px solid var(--line);background:transparent;cursor:pointer;font-weight:600;font-size:.9rem;text-decoration:none;color:var(--fg);white-space:nowrap}
+.btn:hover{background:var(--card-hover)}
+.btn-cta{background:var(--cta);color:var(--cta-fg);border-color:var(--cta);text-transform:uppercase;letter-spacing:.06em;font-size:.85rem;padding:14px 22px}
+.btn-cta:hover{background:var(--cta);filter:brightness(1.08)}
+:root[data-style="clean"] .btn-cta{text-transform:none;letter-spacing:0;font-size:.95rem}
+/* Site style: the outlined bracket button from decisivedrones.com */
+:root:not([data-style="clean"]):not([data-style="tactical"]) .btn-cta{background:transparent;color:#fefefe;border-color:transparent;z-index:0}
+:root:not([data-style="clean"]):not([data-style="tactical"]) .btn-cta::before,
+:root:not([data-style="clean"]):not([data-style="tactical"]) .btn-cta::after,
+:root:not([data-style="clean"]):not([data-style="tactical"]) .btn-cta span::before,
+:root:not([data-style="clean"]):not([data-style="tactical"]) .btn-cta span::after{content:"";position:absolute;width:100%;height:100%;z-index:-1;border:0 solid var(--cta);transition:height .2s ease-in-out,width .3s ease-in-out .2s}
+:root:not([data-style="clean"]):not([data-style="tactical"]) .btn-cta::before{left:0;bottom:0;border-left-width:2px;border-bottom-width:2px}
+:root:not([data-style="clean"]):not([data-style="tactical"]) .btn-cta::after{left:0;top:0;border-left-width:2px;border-top-width:2px}
+:root:not([data-style="clean"]):not([data-style="tactical"]) .btn-cta span::before{right:0;bottom:0;border-right-width:2px;border-bottom-width:2px}
+:root:not([data-style="clean"]):not([data-style="tactical"]) .btn-cta span::after{right:0;top:0;border-right-width:2px;border-top-width:2px}
+:root:not([data-style="clean"]):not([data-style="tactical"]) .btn-cta:hover{filter:none;background:rgba(247,141,40,.1)}
+:root:not([data-style="clean"]):not([data-style="tactical"]) .btn-cta:hover::before,
+:root:not([data-style="clean"]):not([data-style="tactical"]) .btn-cta:hover::after,
+:root:not([data-style="clean"]):not([data-style="tactical"]) .btn-cta:hover span::before,
+:root:not([data-style="clean"]):not([data-style="tactical"]) .btn-cta:hover span::after{width:10px;height:10px;transition-delay:0s,.3s}
+
+.buybar{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 32px;border-top:1px solid var(--line);background:var(--panel)}
+.price{display:grid;line-height:1.1}
+.price-val{font-family:var(--font-data);font-weight:700;font-size:1.6rem;font-variant-numeric:tabular-nums}
+:root:not([data-style="clean"]):not([data-style="tactical"]) .price-val{font-family:var(--font-display);font-size:2rem;letter-spacing:.02em}
+.price-note{font-size:.75rem;color:var(--muted)}
+
+/* toasts */
+.toasts{position:fixed;right:24px;bottom:100px;display:grid;gap:8px;width:min(400px,calc(100vw - 32px));z-index:50;pointer-events:none}
+.toast{pointer-events:auto;padding:12px 14px;border-radius:var(--radius);background:var(--fg);color:var(--bg);font-size:.86rem;box-shadow:0 8px 30px rgba(0,0,0,.25);animation:tin .25s ease-out}
+.toast p{margin:0}
+.toast p+p{margin-top:4px}
+@keyframes tin{from{transform:translateY(8px);opacity:0}}
+
+/* dialogs */
+dialog{border:1px solid var(--line);border-radius:var(--radius);background:var(--panel);color:var(--fg);padding:0;width:min(560px,calc(100% - 32px));max-height:calc(100% - 32px)}
+dialog::backdrop{background:rgba(5,8,14,.66)}
+.dlg{display:grid;gap:18px;padding:24px}
+.dlg-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.dlg-head h2{margin:0;font-family:var(--font-display);font-weight:var(--display-weight);text-transform:var(--display-case);letter-spacing:var(--display-track);font-size:1.8rem;line-height:1}
+.x{border:0;background:transparent;font-size:1.5rem;line-height:1;cursor:pointer;color:var(--muted);padding:4px 8px}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.field{display:grid;gap:4px;min-width:0}
+.field.full{grid-column:1/-1}
+.field label{font-size:.78rem;color:var(--muted)}
+.field input,.field textarea,.field select{width:100%;box-sizing:border-box;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--input)}
+.field textarea{min-height:76px;resize:vertical}
+.mini{font-size:.82rem;color:var(--muted);margin:0}
+.recap{border:1px solid var(--line);border-radius:var(--radius);padding:12px 14px;display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.recap strong{font-family:var(--font-data);font-variant-numeric:tabular-nums}
+.done{display:grid;gap:14px}
+.done p{margin:0}
+.done pre{margin:0;padding:12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--input);font:12px/1.5 "IBM Plex Mono",ui-monospace,monospace;white-space:pre-wrap;max-height:220px;overflow:auto}
+.email-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.email-line code{font-family:"IBM Plex Mono",ui-monospace,monospace;user-select:all}
+
+/* spec sheet: paper document, fixed colors on purpose */
+#sheetDlg{width:min(860px,calc(100% - 32px))}
+.sheet-wrap{padding:16px;background:var(--bg);display:grid;gap:12px}
+.sheet-bar{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+.sheet{background:#ffffff;color:#14171c;padding:36px 40px;font:13px/1.45 "DM Sans",system-ui,sans-serif;display:grid;gap:18px}
+.sheet header{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;border-bottom:2px solid #14171c;padding-bottom:12px;flex-wrap:wrap}
+.sheet .brandmark{font:600 22px/1 "Oswald","Arial Narrow",sans-serif;letter-spacing:.06em;text-transform:uppercase}
+.sheet h3{margin:0;font:600 32px/1 "Oswald","Arial Narrow",sans-serif;text-transform:uppercase}
+.sheet .meta{font-size:12px;color:#4a4f57;text-align:right}
+.sheet .meta code{font-family:"IBM Plex Mono",monospace;color:#14171c}
+.sheet-fig{display:grid;place-items:center;background:#f3f4f6;min-height:220px;color:#7a808a}
+.sheet-fig img{max-height:300px;width:auto}
+.sheet-fig svg{width:100%;max-width:420px;height:auto}
+.sheet table{width:100%;border-collapse:collapse}
+.sheet th,.sheet td{padding:8px 6px;border-bottom:1px solid #d9dce1;text-align:left;vertical-align:top}
+.sheet thead th{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#4a4f57;border-bottom:1px solid #14171c}
+.sheet td.r,.sheet th.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.sheet tfoot td{font-weight:700;font-size:15px;border-bottom:0}
+.sheet .pill{display:inline-block;padding:1px 6px;font-size:10px;font-weight:700;letter-spacing:.06em;color:#fff;border-radius:2px;white-space:nowrap}
+.sheet .pill.ok{background:#1b7a43} .sheet .pill.bad{background:#c13a3a}
+.sheet .status{padding:10px 12px;color:#fff;font-weight:600}
+.sheet .status.ok{background:#1b7a43} .sheet .status.bad{background:#c13a3a}
+.sheet footer{font-size:11px;color:#4a4f57;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;border-top:1px solid #d9dce1;padding-top:10px}
+#printArea{display:none}
+@media print{
+  body>*:not(#printArea){display:none!important}
+  #printArea{display:block}
+  #printArea .sheet{padding:0}
+  @page{margin:14mm}
+}
+
+/* narrow screens: stage on top (sticky), options below, price bar fixed to the bottom */
+@media (max-width:900px){
+  .app{height:auto;min-height:100%;display:block}
+  .topbar{padding:10px 16px}
+  .style-pick .lbl{display:none}
+  .main{display:block}
+  .stage{position:sticky;top:env(safe-area-inset-top,0px);height:40vh;min-height:250px;z-index:3;border-bottom:1px solid var(--line)}
+  .stage-top{padding:12px 16px}
+  .stage-foot{padding:10px}
+  .hint{display:none}
+  .panel{border-left:0}
+  .panel-body{overflow:visible;padding:24px 16px 120px;gap:36px}
+  .buybar{position:fixed;left:0;right:0;bottom:0;z-index:20;padding:12px 16px calc(12px + env(safe-area-inset-bottom,0px))}
+  .toasts{right:16px;bottom:96px}
+  .opts.sizes{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .form{grid-template-columns:1fr}
+  .sheet{padding:20px}
+}
+@media (max-width:420px){
+  .build-badge small{display:none}
+  .price-val{font-size:1.35rem}
+  .btn-cta{padding:12px 14px}
+}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="topbar">
+    <a class="brand" href="https://decisivedrones.com" target="_blank" rel="noopener">Decisive Drones</a>
+    <div class="style-pick" id="stylePick" hidden>
+      <span class="lbl">Preview style</span>
+      <div class="seg" role="radiogroup" aria-label="Page style">
+        <button type="button" role="radio" data-style="site" aria-checked="true">Site</button>
+        <button type="button" role="radio" data-style="clean" aria-checked="false">Clean</button>
+        <button type="button" role="radio" data-style="tactical" aria-checked="false">Tactical</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="stage" id="stage" aria-label="MAD-K preview">
+      <canvas id="c3d" aria-label="3D model of the selected MAD-K build. Drag to rotate."></canvas>
+      <div class="placeholder" id="ph" hidden></div>
+      <div class="loading" id="loading" hidden><span><i class="spin"></i>Loading 3D model</span></div>
+      <div class="stage-top">
+        <div class="stage-title"><span>MAD-K</span><span class="sz" id="stSize">10in</span></div>
+        <div class="build-badge" id="buildBadge" role="status"></div>
+      </div>
+      <div class="stage-foot">
+        <div class="views" id="views" role="group" aria-label="Camera angle">
+          <button type="button" data-view="overview">3/4</button>
+          <button type="button" data-view="front">Front</button>
+          <button type="button" data-view="top">Top</button>
+          <button type="button" data-view="rear">Rear</button>
+        </div>
+        <p class="hint" id="hint">Drag to rotate. Scroll or pinch to zoom.</p>
+      </div>
+    </section>
+
+    <aside class="panel" aria-label="Build options">
+      <div class="panel-body" id="panelBody">
+        <header class="intro">
+          <p class="eyebrow">Build your <b>MAD-K</b></p>
+          <h1>MAD-K<sup>™</sup></h1>
+          <p class="lede">Modular Attritable Drone – Kinetic. Pick a frame size and components; the price and NDAA status update as you go.</p>
+          <dl class="facts">
+            <div><dt>Frame</dt><dd id="fSize">10in</dd></div>
+            <div><dt>Stack</dt><dd id="fStack">H7</dd></div>
+            <div><dt>Cameras</dt><dd id="fCams">1</dd></div>
+          </dl>
+          <label class="ndaa-switch" for="ndaaOnly">
+            <input type="checkbox" id="ndaaOnly" role="switch">
+            <span class="sw" aria-hidden="true"></span>
+            <span><strong>NDAA-compliant parts only</strong><small>Turns off every part that isn't NDAA compliant</small></span>
+          </label>
+        </header>
+
+        <div id="sections" style="display:grid;gap:44px"></div>
+
+        <section class="summary" id="summary" aria-labelledby="sumTitle">
+          <h2 id="sumTitle">Your MAD-K</h2>
+          <div class="ndaa-box" id="ndaaBox" role="status"></div>
+          <table class="lines">
+            <tbody id="lines"></tbody>
+            <tfoot><tr><th scope="row" colspan="2">Total per aircraft</th><td class="p" id="total2"></td></tr></tfoot>
+          </table>
+          <p class="code-row">Build code <code id="code"></code></p>
+          <div class="actions">
+            <button type="button" class="btn" id="shareBtn">Copy build link</button>
+            <button type="button" class="btn" id="sheetBtn">Spec sheet</button>
+          </div>
+        </section>
+      </div>
+
+      <div class="buybar">
+        <div class="price"><span class="price-val" id="total">$0</span><span class="price-note">per aircraft</span></div>
+        <button type="button" class="btn btn-cta" id="quoteBtn"><span>Request a quote</span></button>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<dialog id="quoteDlg" aria-labelledby="qTitle">
+  <div class="dlg">
+    <div class="dlg-head">
+      <h2 id="qTitle">Request a quote</h2>
+      <button type="button" class="x" data-close aria-label="Close">×</button>
+    </div>
+    <form id="quoteForm" class="dlg" style="padding:0" novalidate>
+      <div class="recap"><span id="qRecap">MAD-K 10in</span><strong id="qTotal">$0</strong></div>
+      <div class="form">
+        <div class="field"><label for="qName">Name *</label><input id="qName" name="name" autocomplete="name" required></div>
+        <div class="field"><label for="qEmail">Email *</label><input id="qEmail" name="email" type="email" autocomplete="email" required></div>
+        <div class="field"><label for="qPhone">Phone</label><input id="qPhone" name="phone" type="tel" autocomplete="tel"></div>
+        <div class="field"><label for="qOrg">Unit or organization</label><input id="qOrg" name="org" autocomplete="organization"></div>
+        <div class="field"><label for="qQty">Quantity</label><input id="qQty" name="qty" type="number" min="1" step="1" value="1" inputmode="numeric"></div>
+        <div class="field"><label for="qDate">Needed by</label><input id="qDate" name="needed" type="date"></div>
+        <div class="field full"><label for="qNotes">Notes</label><textarea id="qNotes" name="notes" placeholder="Contract vehicle, delivery location, spares, training needs"></textarea></div>
+      </div>
+      <p class="mini" id="qErr" role="alert" hidden></p>
+      <p class="mini" id="qVia"></p>
+      <div class="actions"><button type="submit" class="btn btn-cta" id="qSubmit"><span>Email this request</span></button></div>
+    </form>
+    <div class="done" id="qDone" hidden></div>
+  </div>
+</dialog>
+
+<dialog id="sheetDlg" aria-label="Spec sheet">
+  <div class="sheet-wrap">
+    <div class="sheet-bar">
+      <strong>Spec sheet</strong>
+      <div class="actions">
+        <button type="button" class="btn" id="printBtn" hidden>Print or save PDF</button>
+        <button type="button" class="btn" data-close>Close</button>
+      </div>
+    </div>
+    <div id="sheetHost"></div>
+  </div>
+</dialog>
+<div id="printArea"></div>
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}
+</script>
+<script type="module">
+/* =====================================================================
+   SETTINGS — edit these to change prices, options and behavior.
+   ===================================================================== */
+const CONFIG = {
+  salesEmail: 'sales@decisivedrones.com',
+  // Optional: a URL that accepts a POST with the quote as JSON (a WordPress form
+  // endpoint, Formspree, etc.). Leave empty and "Request a quote" opens an email instead.
+  quoteEndpoint: '',
+  // Address used for "Copy build link". Empty = the page's own address.
+  shareBaseUrl: '',
+  // The Site / Clean / Tactical switch in the top bar. Set false once you pick a style.
+  showStylePicker: true,
+  defaultStyle: 'site',
+  defaultSize: '10',
+};
+
+// Frame sizes. `model` = 3D file (GLB). `image` = photo URL to show instead of a 3D model.
+// Leave both empty to show the drawn placeholder.
+const SIZES = [
+  { id: '5',  label: '5in',  price: 1275, model: 'models/source1-5in.json', image: '' },
+  { id: '8',  label: '8in',  price: 1375, model: '', image: '' },
+  { id: '10', label: '10in', price: 1395, model: 'models/mk4-10in.json', image: '' },
+  { id: '15', label: '15in', price: 1776, model: '', image: '' },
+];
+
+// ndaa: true = green NDAA badge, false = red NON-NDAA badge, null = no badge.
+// sizes: limits an option to those frame sizes. price: change from the base price.
+const OPTS = {
+  stack: [
+    { id: 'h7n', name: 'H7 flight stack', note: 'Betaflight and ArduPilot', ndaa: true,  price: 0 },
+    { id: 'h7x', name: 'H7 flight stack', note: 'Betaflight and ArduPilot', ndaa: false, price: 0 },
+    { id: 'f7n', name: 'F7 flight stack', note: 'Betaflight only',          ndaa: true,  price: -10 },
+    { id: 'f7x', name: 'F7 flight stack', note: 'Betaflight only',          ndaa: false, price: -10 },
+  ],
+  firmware: [
+    { id: 'bf', name: 'Betaflight', price: 0 },
+    { id: 'ap', name: 'ArduPilot', price: 100, needsH7: true },
+  ],
+  // price = as the first camera. second = price when added as the second camera.
+  camera: [
+    { id: 'day', name: 'Day camera',       note: '',                 ndaa: true,  price: 0,    second: 80 },
+    { id: 'dn',  name: 'Day/Night camera', note: 'Caddx Ratel Pro',  ndaa: false, price: 0,    second: 72 },
+    { id: 'thn', name: 'Thermal camera',   note: '',                 ndaa: true,  price: 700,  second: 780,  sizes: ['8','10','15'] }, // second: placeholder ($700 + $80)
+    { id: 'thx', name: 'Thermal camera',   note: '',                 ndaa: false, price: 1300, second: 1380, sizes: ['8','10','15'] }, // second: placeholder ($1300 + $80)
+  ],
+  vtx: [
+    { id: '3w',  name: '3W VTX',   note: '',                          ndaa: true,  price: 0 },
+    { id: '2w5', name: '2.5W VTX', note: 'Built-in heatsink and fan', ndaa: false, price: -15 },
+    { id: '5w',  name: '5W VTX',   note: 'Standard on the 15in',      ndaa: false, price: 0, sizes: ['15'] }, // price TBD
+  ],
+  c2: [
+    { id: 'gem',   name: 'ELRS Gemini',    note: 'Dual antenna',                ndaa: false, price: 0, sizes: ['8','10','15'] }, // price TBD
+    { id: 'elrs',  name: 'ELRS',           note: 'Single antenna, dual band',   ndaa: false, price: 0 }, // price TBD
+    { id: 'crsfd', name: 'CRSF Diversity', note: 'Dual antenna',                ndaa: true,  price: 0, sizes: ['8','10','15'] }, // price TBD
+    { id: 'crsf',  name: 'CRSF',           note: 'Single antenna',              ndaa: true,  price: 0 }, // price TBD
+  ],
+  gps: [
+    { id: 'gpsn', name: 'GPS',    note: '', ndaa: true,  price: 0 }, // price TBD
+    { id: 'gpsx', name: 'GPS',    note: '', ndaa: false, price: 0 }, // price TBD
+    { id: 'none', name: 'No GPS', note: '', ndaa: null,  price: 0 },
+  ],
+};
+const DEFAULTS = { size: CONFIG.defaultSize, stack: 'h7n', fw: 'bf', cam1: 'day', cam2: null, vtx: '3w', c2: 'crsf', gps: 'gpsn', ndaaOnly: false };
+// Closest NDAA part when "NDAA-compliant parts only" is turned on.
+const NDAA_SWAP = { h7x: 'h7n', f7x: 'f7n', dn: 'day', thx: 'thn', '2w5': '3w', '5w': '3w', gem: 'crsfd', elrs: 'crsf', gpsx: 'gpsn' };
+// Closest part when an option isn't offered on the chosen size.
+const SIZE_FALLBACK = { thn: 'day', thx: 'day', '5w': '3w', gem: 'elrs', crsfd: 'crsf' };
+
+/* ===================================================================== */
+const $ = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
+const money = n => usd.format(n);
+const delta = n => n === 0 ? 'Included' : n > 0 ? '+' + money(n) : '−' + money(-n);
+const find = (cat, id) => OPTS[cat].find(o => o.id === id);
+const sizeOf = id => SIZES.find(s => s.id === id);
+const tag = o => o.ndaa === true ? ' (NDAA)' : o.ndaa === false ? ' (non-NDAA)' : '';
+const full = o => o.name + tag(o);
+const IN_SANDBOX = /claude|anthropic/i.test(location.hostname) || location.protocol === 'blob:' || location.origin === 'null';
+const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const SLOTS = [
+  { key: 'stack', cat: 'stack',  label: 'Flight stack' },
+  { key: 'cam1',  cat: 'camera', label: 'Camera 1' },
+  { key: 'cam2',  cat: 'camera', label: 'Camera 2' },
+  { key: 'vtx',   cat: 'vtx',    label: 'VTX' },
+  { key: 'c2',    cat: 'c2',     label: 'C2 link' },
+  { key: 'gps',   cat: 'gps',    label: 'GPS' },
+];
+
+let state = { ...DEFAULTS };
+const touched = { vtx: false };
+
+/* ---------- rules ---------- */
+function availability(cat, o, s) {
+  if (!o) return { ok: false, why: '' };
+  if (o.sizes && !o.sizes.includes(s.size)) return { ok: false, why: o.sizes.map(x => x + 'in').join(', ') + ' only', reason: 'size' };
+  if (s.ndaaOnly && o.ndaa === false) return { ok: false, why: 'Not NDAA compliant', reason: 'ndaa' };
+  if (cat === 'firmware' && o.needsH7 && !s.stack.startsWith('h7')) return { ok: false, why: 'Needs an H7 stack', reason: 'stack' };
+  return { ok: true };
+}
+function replacement(cat, id, s) {
+  const c = [];
+  if (s.ndaaOnly) c.push(NDAA_SWAP[id]);
+  c.push(SIZE_FALLBACK[id], NDAA_SWAP[SIZE_FALLBACK[id]], SIZE_FALLBACK[NDAA_SWAP[id]]);
+  c.push(...OPTS[cat].map(o => o.id));
+  for (const cand of c) if (cand && availability(cat, find(cat, cand), s).ok) return cand;
+  return OPTS[cat][0].id;
+}
+function normalize(s, notes) {
+  s = { ...s };
+  if (!sizeOf(s.size)) s.size = DEFAULTS.size;
+  if (s.size === '5' && s.cam2) { s.cam2 = null; notes.push('The 5in carries one camera, so Camera 2 was removed.'); }
+  for (const { key, cat, label } of SLOTS) {
+    if (!s[key]) continue;
+    const o = find(cat, s[key]);
+    if (!o) { s[key] = DEFAULTS[key]; continue; }
+    const a = availability(cat, o, s);
+    if (!a.ok) {
+      const next = find(cat, replacement(cat, o.id, s));
+      const where = a.reason === 'size' ? `isn't offered on the ${sizeOf(s.size).label}` : `isn't NDAA compliant`;
+      notes.push(`${full(o)} ${where}. ${label} is now ${full(next)}.`);
+      s[key] = next.id;
+    }
+  }
+  if (s.fw === 'ap' && !s.stack.startsWith('h7')) { s.fw = 'bf'; notes.push(`ArduPilot needs an H7 stack. Firmware is now Betaflight (${delta(-find('firmware', 'ap').price)}).`); }
+  return s;
+}
+function camCost(a, b) {
+  const A = find('camera', a), B = b && find('camera', b);
+  if (!B) return A.price;
+  return Math.min(A.price + B.second, B.price + A.second);
+}
+function priceLines(s) {
+  const sz = sizeOf(s.size), st = find('stack', s.stack), fw = find('firmware', s.fw);
+  const c1 = find('camera', s.cam1), c2 = s.cam2 && find('camera', s.cam2);
+  const v = find('vtx', s.vtx), l = find('c2', s.c2), g = find('gps', s.gps);
+  const lines = [
+    { cat: 'Frame', name: `MAD-K ${sz.label}`, price: sz.price, ndaa: null },
+    { cat: 'Flight stack', name: st.name, price: st.price, ndaa: st.ndaa },
+    { cat: 'Firmware', name: fw.name, price: fw.price || 0, ndaa: null },
+    { cat: s.cam2 ? 'Camera 1' : 'Camera', name: c1.name + (c1.note ? ` · ${c1.note}` : ''), price: c1.price, ndaa: c1.ndaa },
+  ];
+  if (c2) lines.push({ cat: 'Camera 2', name: c2.name + (c2.note ? ` · ${c2.note}` : ''), price: camCost(s.cam1, s.cam2) - c1.price, ndaa: c2.ndaa });
+  lines.push(
+    { cat: 'VTX', name: v.name + (v.note ? ` · ${v.note}` : ''), price: v.price, ndaa: v.ndaa },
+    { cat: 'C2 link', name: l.name + ` · ${l.note}`, price: l.price, ndaa: l.ndaa },
+    { cat: 'GPS', name: g.name, price: g.price, ndaa: g.ndaa },
+  );
+  return { lines, total: lines.reduce((t, x) => t + x.price, 0), bad: lines.filter(x => x.ndaa === false) };
+}
+
+/* ---------- build code (shareable, URL-safe) ---------- */
+const codeOf = s => ['MK', s.size, s.stack, s.fw, s.cam1 + (s.cam2 ? '.' + s.cam2 : ''), s.vtx, s.c2, s.gps].join('-');
+function parseCode(str) {
+  const p = (str || '').replace(/^#/, '').split('-');
+  if (p[0] !== 'MK' || p.length < 8) return null;
+  const [cam1, cam2] = p[4].split('.');
+  return { ...DEFAULTS, size: p[1], stack: p[2], fw: p[3], cam1, cam2: cam2 || null, vtx: p[5], c2: p[6], gps: p[7] };
+}
+
+/* ---------- UI build ---------- */
+const SECTIONS = [
+  { key: 'size',   title: 'Frame size',  sub: 'Sets the base price. Thermal cameras, dual-antenna links and a second camera need 8in or larger.' },
+  { key: 'stack',  title: 'Flight stack', sub: 'H7 runs Betaflight or ArduPilot. F7 runs Betaflight only.' },
+  { key: 'camera', title: 'Camera',      sub: '8in and larger carry up to two cameras. The 5in carries one.' },
+  { key: 'vtx',    title: 'VTX',         sub: 'Video transmitter.' },
+  { key: 'c2',     title: 'C2 link',     sub: 'Command and control receiver. Dual-antenna links need 8in or larger.' },
+  { key: 'gps',    title: 'GPS',         sub: '' },
+];
+function badgeHTML(ndaa) {
+  if (ndaa === true) return '<span class="badge ok">NDAA</span>';
+  if (ndaa === false) return '<span class="badge bad">Non-NDAA</span>';
+  return '';
+}
+function optButton(cat, slot, o, extraClass = '') {
+  return `<button type="button" class="opt ${extraClass}" role="radio" aria-checked="false" data-cat="${cat}" data-slot="${slot}" data-id="${o.id}">
+    <span class="opt-main"><span class="opt-name">${esc(o.name)}</span>${o.note ? `<span class="opt-note">${esc(o.note)}</span>` : ''}</span>
+    <span class="opt-side">${badgeHTML(o.ndaa)}<span class="opt-price"></span></span>
+    <span class="opt-why" hidden></span>
+  </button>`;
+}
+function buildUI() {
+  const host = $('#sections');
+  host.innerHTML = SECTIONS.map(sec => {
+    let body = '';
+    if (sec.key === 'size') {
+      body = `<div class="opts sizes" role="radiogroup" aria-label="Frame size">${SIZES.map(z =>
+        `<button type="button" class="opt size" role="radio" aria-checked="false" data-cat="size" data-slot="size" data-id="${z.id}">
+          <span class="opt-name">${z.label}</span><span class="opt-price">${money(z.price)}</span></button>`).join('')}</div>`;
+    } else if (sec.key === 'stack') {
+      body = `<div class="opts" role="radiogroup" aria-label="Flight stack">${OPTS.stack.map(o => optButton('stack', 'stack', o)).join('')}</div>
+        <div class="sub">
+          <div class="sub-row"><span class="sub-label">Firmware</span>
+            <div class="seg" role="radiogroup" aria-label="Firmware" id="fwSeg">${OPTS.firmware.map(f =>
+              `<button type="button" role="radio" aria-checked="false" data-cat="firmware" data-slot="fw" data-id="${f.id}">${f.name}${f.price ? ` <span class="fw-price">${delta(f.price)}</span>` : ''}</button>`).join('')}</div>
+          </div>
+          <p class="fw-note" id="fwNote"></p>
+        </div>`;
+    } else if (sec.key === 'camera') {
+      body = `<p class="slot" id="cam1Label">Camera 1</p>
+        <div class="opts" role="radiogroup" aria-labelledby="cam1Label">${OPTS.camera.map(o => optButton('camera', 'cam1', o)).join('')}</div>
+        <label class="toggle" id="cam2Toggle" for="cam2On">
+          <input type="checkbox" id="cam2On" role="switch"><span class="sw" aria-hidden="true"></span>
+          <span><span>Add a second camera</span><small id="cam2Hint"></small></span>
+        </label>
+        <div id="cam2Wrap" hidden>
+          <p class="slot" id="cam2Label">Camera 2</p>
+          <div class="opts" role="radiogroup" aria-labelledby="cam2Label">${OPTS.camera.map(o => optButton('camera', 'cam2', o)).join('')}</div>
+        </div>`;
+    } else {
+      body = `<div class="opts" role="radiogroup" aria-label="${sec.title}">${OPTS[sec.key].map(o => optButton(sec.key, sec.key, o)).join('')}</div>`;
+    }
+    return `<section class="sec" id="sec-${sec.key}" data-sec="${sec.key}">
+      <header class="sec-head"><h2>${sec.title}</h2>${sec.sub ? `<p class="sec-sub">${sec.sub}</p>` : ''}</header>${body}</section>`;
+  }).join('');
+
+  host.addEventListener('click', e => {
+    const b = e.target.closest('[data-slot]');
+    if (!b) return;
+    if (b.getAttribute('aria-disabled') === 'true') {
+      const why = b.dataset.why;
+      if (why) toast([`${b.querySelector('.opt-name')?.textContent || b.textContent.trim()}: ${why}.`]);
+      return;
+    }
+    choose(b.dataset.slot, b.dataset.id);
+  });
+  $('#cam2On').addEventListener('change', e => {
+    if (state.size === '5') { e.target.checked = false; return; }
+    choose('cam2', e.target.checked ? 'day' : null);
+  });
+  $('#ndaaOnly').addEventListener('change', e => {
+    const notes = [];
+    const next = normalize({ ...state, ndaaOnly: e.target.checked }, notes);
+    commit(next, notes.length ? [e.target.checked ? 'NDAA-only is on.' : '', ...notes].filter(Boolean) : [], null);
+  });
+}
+
+function choose(slot, id) {
+  const notes = [];
+  let s = { ...state };
+  let focus = { size: 'overview', stack: 'stack', fw: 'stack', cam1: 'camera', cam2: 'camera', vtx: 'vtx', c2: 'c2', gps: 'gps' }[slot];
+  if (slot === 'size') {
+    const prev = s.size;
+    s.size = id;
+    if (id === '15' && prev !== '15' && !touched.vtx && s.vtx === '3w' && !s.ndaaOnly) {
+      s.vtx = '5w';
+      notes.push('15in builds come with the 5W VTX. You can switch it in the VTX section.');
+    }
+  } else {
+    s[slot] = id;
+    if (slot === 'vtx') touched.vtx = true;
+  }
+  s = normalize(s, notes);
+  commit(s, notes, focus);
+}
+
+function commit(s, notes, focus) {
+  const prev = state;
+  state = s;
+  render();
+  if (notes && notes.length) toast(notes);
+  viewer?.update(state, { focus, prev });
+}
+
+/* ---------- render ---------- */
+function render() {
+  const s = state;
+  document.documentElement.dataset.size = s.size;
+  $$('#sections [data-slot]').forEach(b => {
+    const { cat, slot, id } = b.dataset;
+    let checked, avail = { ok: true };
+    if (cat === 'size') checked = s.size === id;
+    else if (cat === 'firmware') { checked = s.fw === id; avail = availability(cat, find(cat, id), s); }
+    else { checked = s[slot] === id; avail = availability(cat, find(cat, id), s); }
+    b.setAttribute('aria-checked', String(!!checked));
+    if (cat === 'firmware') { b.disabled = !avail.ok; b.title = avail.ok ? '' : avail.why; return; }
+    b.setAttribute('aria-disabled', String(!avail.ok));
+    b.dataset.why = avail.ok ? '' : avail.why;
+    const why = b.querySelector('.opt-why');
+    if (why) { why.hidden = avail.ok; why.textContent = avail.ok ? '' : avail.why; }
+    const pr = b.querySelector('.opt-price');
+    if (pr && cat !== 'size') {
+      const o = find(cat, id);
+      pr.textContent = slot === 'cam2' ? delta(camCost(s.cam1, id) - find('camera', s.cam1).price) : delta(o.price);
+    }
+  });
+  // camera 2
+  const can2 = s.size !== '5';
+  const t = $('#cam2On');
+  t.checked = !!s.cam2; t.disabled = !can2;
+  $('#cam2Toggle').classList.toggle('disabled', !can2);
+  $('#cam2Hint').textContent = can2 ? (s.cam2 ? '' : `From ${money(Math.min(...OPTS.camera.map(c => camCost(s.cam1, c.id) - find('camera', s.cam1).price)))}`) : 'The 5in carries one camera';
+  $('#cam2Wrap').hidden = !s.cam2;
+  $('#cam1Label').textContent = s.cam2 ? 'Camera 1' : 'Camera';
+  $('#fwNote').textContent = s.stack.startsWith('h7') ? `The H7 stack runs either firmware. ArduPilot adds ${money(find('firmware', 'ap').price)}.` : 'ArduPilot needs an H7 stack.';
+
+  // facts + stage
+  const sz = sizeOf(s.size), st = find('stack', s.stack), fw = find('firmware', s.fw);
+  $('#fSize').textContent = sz.label;
+  $('#fStack').textContent = `${st.name.split(' ')[0]} · ${fw.name}`;
+  $('#fCams').textContent = s.cam2 ? '2' : '1';
+  $('#stSize').textContent = sz.label;
+
+  const { lines, total, bad } = priceLines(s);
+  $('#total').textContent = money(total);
+  $('#total2').textContent = money(total);
+  $('#lines').innerHTML = lines.map(l => `<tr><td><span class="cat">${l.cat}</span>${esc(l.name)}</td><td class="b">${badgeHTML(l.ndaa)}</td><td class="p">${l.cat === 'Frame' ? money(l.price) : delta(l.price)}</td></tr>`).join('');
+  const shield = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M12 3l7 3v6c0 4.5-3 7.6-7 9-4-1.4-7-4.5-7-9V6l7-3z"/>' ;
+  const okIcon = shield + '<path d="M8.5 12.2l2.4 2.4 4.6-4.8"/></svg>';
+  const badIcon = shield + '<path d="M12 8v5M12 16.2v.3"/></svg>';
+  const badNames = bad.map(b => b.name.split(' · ')[0]);
+  $('#ndaaBox').className = 'ndaa-box ' + (bad.length ? 'bad' : 'ok');
+  $('#ndaaBox').innerHTML = bad.length
+    ? `${badIcon}<div><strong>Not NDAA compliant</strong><p>${bad.length} part${bad.length > 1 ? 's' : ''} need${bad.length > 1 ? '' : 's'} an NDAA swap: ${esc(badNames.join(', '))}.</p></div>`
+    : `${okIcon}<div><strong>NDAA compliant build</strong><p>Every component in this build is NDAA compliant.</p></div>`;
+  $('#buildBadge').className = 'build-badge ' + (bad.length ? 'bad' : 'ok');
+  $('#buildBadge').innerHTML = bad.length
+    ? `${badIcon}<span>Not NDAA compliant<small>${bad.length} non-NDAA part${bad.length > 1 ? 's' : ''}</small></span>`
+    : `${okIcon}<span>NDAA compliant build</span>`;
+  $('#ndaaOnly').checked = s.ndaaOnly;
+
+  const code = codeOf(s);
+  $('#code').textContent = code;
+  try { history.replaceState(null, '', '#' + code); } catch (e) { /* sandboxed */ }
+}
+
+/* ---------- toasts ---------- */
+function toast(lines, ms = 5200) {
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.innerHTML = lines.map(l => `<p>${esc(l)}</p>`).join('');
+  $('#toasts').append(el);
+  setTimeout(() => el.remove(), ms + lines.length * 900);
+}
+
+/* ---------- summary text (quote + clipboard) ---------- */
+function buildText(extra = {}) {
+  const { lines, total, bad } = priceLines(state);
+  const out = [`MAD-K build ${codeOf(state)}`, ''];
+  for (const l of lines) out.push(`${l.cat}: ${l.name}${l.ndaa === true ? ' [NDAA]' : l.ndaa === false ? ' [NON-NDAA]' : ''} — ${l.cat === 'Frame' ? money(l.price) : delta(l.price)}`);
+  out.push('', `Price per aircraft: ${money(total)}`);
+  out.push(bad.length ? `NDAA status: NOT compliant (${bad.length} part${bad.length > 1 ? 's' : ''})` : 'NDAA status: Compliant build');
+  if (extra.qty) out.push(`Quantity: ${extra.qty}`, `Estimated total: ${money(total * extra.qty)}`);
+  out.push(`Build link: ${shareUrl()}`);
+  return out.join('\n');
+}
+function shareUrl() {
+  const base = CONFIG.shareBaseUrl || (location.origin !== 'null' ? location.origin + location.pathname : 'https://decisivedrones.com/');
+  return base + '#' + codeOf(state);
+}
+async function copy(text, okMsg) {
+  try { await navigator.clipboard.writeText(text); toast([okMsg], 2600); return true; }
+  catch (e) { return false; }
+}
+
+/* ---------- quote dialog ---------- */
+function setupQuote() {
+  const dlg = $('#quoteDlg'), form = $('#quoteForm'), done = $('#qDone');
+  const refresh = () => {
+    const { total } = priceLines(state);
+    const qty = Math.max(1, parseInt($('#qQty').value, 10) || 1);
+    $('#qRecap').textContent = `MAD-K ${sizeOf(state.size).label} · ${codeOf(state)}${qty > 1 ? ` · ×${qty}` : ''}`;
+    $('#qTotal').textContent = money(total * qty);
+  };
+  $('#qQty').addEventListener('input', refresh);
+  $('#qVia').textContent = CONFIG.quoteEndpoint
+    ? `Your request and build go to the Decisive Drones sales team.`
+    : `This opens your email app with the build filled in, addressed to ${CONFIG.salesEmail}.`;
+  $('#qSubmit span').textContent = CONFIG.quoteEndpoint ? 'Send request' : 'Email this request';
+  $('#quoteBtn').addEventListener('click', () => {
+    form.hidden = false; done.hidden = true; $('#qErr').hidden = true;
+    refresh(); dlg.showModal(); $('#qName').focus();
+  });
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    const f = Object.fromEntries(new FormData(form));
+    const err = !f.name.trim() ? 'Add your name.' : !/^\S+@\S+\.\S+$/.test(f.email) ? 'Add an email address we can reply to.' : '';
+    if (err) { $('#qErr').textContent = err; $('#qErr').hidden = false; return; }
+    $('#qErr').hidden = true;
+    const qty = Math.max(1, parseInt(f.qty, 10) || 1);
+    const contact = [`Name: ${f.name}`, `Email: ${f.email}`, f.phone && `Phone: ${f.phone}`, f.org && `Unit / organization: ${f.org}`,
+      f.needed && `Needed by: ${f.needed}`, f.notes && `Notes: ${f.notes}`].filter(Boolean);
+    const fullText = contact.join('\n') + '\n\n' + buildText({ qty });
+    const subject = `MAD-K quote request — ${sizeOf(state.size).label} ×${qty} — ${f.org || f.name}`;
+
+    if (CONFIG.quoteEndpoint) {
+      try {
+        const r = await fetch(CONFIG.quoteEndpoint, { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ ...f, qty, build: codeOf(state), total: priceLines(state).total, summary: fullText, _subject: subject }) });
+        if (!r.ok) throw new Error(r.status);
+        showDone(true, f.email, fullText, subject);
+        return;
+      } catch (e2) { /* fall through to email */ }
+    }
+    const mailto = `mailto:${CONFIG.salesEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(fullText)}`;
+    try { window.location.href = mailto; } catch (e3) { /* blocked */ }
+    showDone(false, f.email, fullText, subject);
+  });
+  function showDone(sent, email, text, subject) {
+    form.hidden = true; done.hidden = false;
+    done.innerHTML = sent
+      ? `<p>Request sent. The sales team will reply to <strong>${esc(email)}</strong>.</p><pre>${esc(text)}</pre><div class="actions"><button type="button" class="btn" data-close>Done</button></div>`
+      : `<p>Your email app should open with this request filled in. If it didn't, copy the request and email it to:</p>
+         <p class="email-line"><code>${esc(CONFIG.salesEmail)}</code></p>
+         <pre id="qText">${esc('Subject: ' + subject + '\n\n' + text)}</pre>
+         <div class="actions"><button type="button" class="btn btn-cta" id="qCopy"><span>Copy request</span></button><button type="button" class="btn" data-close>Done</button></div>`;
+    const c = $('#qCopy');
+    if (c) c.addEventListener('click', async () => {
+      if (!(await copy('To: ' + CONFIG.salesEmail + '\nSubject: ' + subject + '\n\n' + text, 'Request copied'))) selectText($('#qText'));
+    });
+  }
+}
+function selectText(el) { const r = document.createRange(); r.selectNodeContents(el); const s = getSelection(); s.removeAllRanges(); s.addRange(r); }
+
+/* ---------- spec sheet ---------- */
+function placeholderSVG(label, caption = 'Photo coming soon') {
+  const m = [[190, 130], [450, 130], [190, 310], [450, 310]];
+  return `<svg viewBox="0 0 640 480" role="img" aria-label="MAD-K ${label} placeholder drawing">
+    <g fill="none" stroke="currentColor" stroke-width="2">
+      ${m.map(([x, y]) => `<circle cx="${x}" cy="${y}" r="88" stroke-dasharray="5 9" opacity=".45"/><circle cx="${x}" cy="${y}" r="17" opacity=".8"/>`).join('')}
+      <path d="M190 130L450 310M450 130L190 310" stroke-width="10" stroke-linecap="round" opacity=".35"/>
+      <rect x="280" y="150" width="80" height="140" rx="6" fill="currentColor" fill-opacity=".12" opacity=".8"/>
+      <path d="M306 150l14-18 14 18" opacity=".8"/>
+    </g>
+    <text x="320" y="438" text-anchor="middle" fill="currentColor" style="font:600 30px var(--font-display, 'Oswald', sans-serif);letter-spacing:.06em;text-transform:uppercase">MAD-K ${label}</text>
+    <text x="320" y="466" text-anchor="middle" fill="currentColor" opacity=".75" style="font:500 15px 'DM Sans', sans-serif">${caption}</text>
+  </svg>`;
+}
+function sheetHTML() {
+  const { lines, total, bad } = priceLines(state);
+  const sz = sizeOf(state.size);
+  const snap = viewer?.snapshot?.();
+  const fig = sz.image ? `<img src="${esc(sz.image)}" alt="MAD-K ${sz.label}">` : snap ? `<img src="${snap}" alt="MAD-K ${sz.label} build render">` : placeholderSVG(sz.label);
+  const date = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  return `<article class="sheet">
+    <header><div><div class="brandmark">Decisive Drones</div><h3>MAD-K ${sz.label} build sheet</h3></div>
+      <div class="meta">Build code <code>${codeOf(state)}</code><br>${date}</div></header>
+    <div class="sheet-fig">${fig}</div>
+    <div class="status ${bad.length ? 'bad' : 'ok'}">${bad.length ? `Not NDAA compliant. Non-NDAA parts: ${esc(bad.map(b => b.name.split(' · ')[0]).join(', '))}` : 'NDAA compliant build: every component is NDAA compliant'}</div>
+    <table><thead><tr><th>Component</th><th>Selection</th><th>NDAA</th><th class="r">Price</th></tr></thead>
+      <tbody>${lines.map(l => `<tr><td>${l.cat}</td><td>${esc(l.name)}</td><td>${l.ndaa === true ? '<span class="pill ok">NDAA</span>' : l.ndaa === false ? '<span class="pill bad">NON-NDAA</span>' : '—'}</td><td class="r">${l.cat === 'Frame' ? money(l.price) : delta(l.price)}</td></tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="3">Price per aircraft</td><td class="r">${money(total)}</td></tr></tfoot></table>
+    <footer><span>Quotes: ${esc(CONFIG.salesEmail)}</span><span>decisivedrones.com</span></footer>
+  </article>`;
+}
+function setupShare() {
+  const b = $('#shareBtn');
+  if (IN_SANDBOX && !CONFIG.shareBaseUrl) b.textContent = 'Copy build code';
+  b.addEventListener('click', async () => {
+    const text = IN_SANDBOX && !CONFIG.shareBaseUrl ? codeOf(state) : shareUrl();
+    if (!(await copy(text, IN_SANDBOX && !CONFIG.shareBaseUrl ? 'Build code copied' : 'Build link copied'))) { selectText($('#code')); toast(['Press Ctrl+C or Cmd+C to copy the build code.']); }
+  });
+}
+function setupSheet() {
+  const dlg = $('#sheetDlg');
+  $('#printBtn').hidden = IN_SANDBOX;
+  $('#sheetBtn').addEventListener('click', () => { $('#sheetHost').innerHTML = sheetHTML(); dlg.showModal(); });
+  $('#printBtn').addEventListener('click', () => { $('#printArea').innerHTML = $('#sheetHost').innerHTML; window.print(); });
+}
+
+/* ---------- style picker ---------- */
+function applyStyle(name) {
+  if (name === 'site') document.documentElement.removeAttribute('data-style');
+  else document.documentElement.dataset.style = name;
+  $$('#stylePick [data-style]').forEach(b => b.setAttribute('aria-checked', String(b.dataset.style === name)));
+  try { localStorage.setItem('madk-style', name); } catch (e) {}
+  viewer?.restyle();
+  refreshPlaceholder();
+}
+function setupStyles() {
+  let saved = CONFIG.defaultStyle;
+  if (CONFIG.showStylePicker) {
+    $('#stylePick').hidden = false;
+    try { saved = localStorage.getItem('madk-style') || saved; } catch (e) {}
+    $('#stylePick').addEventListener('click', e => { const b = e.target.closest('[data-style]'); if (b) applyStyle(b.dataset.style); });
+  }
+  applyStyle(saved);
+}
+
+/* ---------- stage: placeholder vs 3D ---------- */
+function refreshPlaceholder() {
+  const sz = sizeOf(state.size);
+  const ph = $('#ph');
+  const wants3D = !!sz.model && !sz.image && viewerStatus !== 'failed' && !modelFailed[sz.model];
+  const use3D = wants3D && viewerStatus === 'ready';
+  ph.hidden = wants3D;
+  if (!wants3D) $('#loading').hidden = true;
+  else if (viewerStatus === 'loading') $('#loading').hidden = false;
+  $('#c3d').style.visibility = use3D ? 'visible' : 'hidden';
+  $('#views').hidden = !use3D;
+  $('#hint').hidden = !use3D;
+  const broken = !!sz.model && !sz.image && !wants3D;
+  if (!use3D) ph.innerHTML = sz.image ? `<img src="${esc(sz.image)}" alt="MAD-K ${sz.label}" style="max-height:100%;object-fit:contain">` : placeholderSVG(sz.label, broken ? '3D view unavailable in this browser' : 'Photo coming soon');
+}
+
+/* =====================================================================
+   3D VIEWER (three.js). If it can't load, the stage shows the drawing.
+   ===================================================================== */
+// Mounting points measured from the CAD files, in meters. +Z = nose, +Y = up, motors sit on Y = 0.
+const RIGS = {
+  'models/mk4-10in.json': { motors: [[-.1734, .1385], [.1734, .1385], [-.1734, -.1385], [.1734, -.1385]], motorR: .0185, motorH: .026, propR: .127,
+    cageLo: .003, cageHi: .038, topY: .040, camZ: .094, stackY: .003, stackZ: 0, vtxY: .003, vtxZ: -.078, rearZ: -.106, gpsZ: -.09,
+    antX: .014, antY: .006, antZ: -.098, antLen: .085, groundY: -.0102 },
+  'models/source1-5in.json': { motors: [[-.0914, .0778], [.0914, .0778], [-.0914, -.0778], [.0914, -.0778]], motorR: .0142, motorH: .019, propR: .0635,
+    cageLo: -.006, cageHi: .0235, topY: .0255, camZ: .077, stackY: .0025, stackZ: .001, vtxY: .0025, vtxZ: -.055, rearZ: -.0838, gpsZ: -.066,
+    antX: .012, antY: .003, antZ: -.078, antLen: .06, groundY: -.0099 },
+};
+
+let viewer = null, viewerStatus = 'loading', viewerError = '';
+const modelFailed = {};
+// three.js: try the CDN first, then the copy published next to this page (vendor/three-bundle.js).
+async function loadThree() {
+  try {
+    const [THREE, a, b, c, d, BGU] = await Promise.all([import('three'),
+      import('three/addons/loaders/GLTFLoader.js'), import('three/addons/controls/OrbitControls.js'),
+      import('three/addons/environments/RoomEnvironment.js'), import('three/addons/geometries/RoundedBoxGeometry.js'),
+      import('three/addons/utils/BufferGeometryUtils.js')]);
+    return { THREE, GLTFLoader: a.GLTFLoader, OrbitControls: b.OrbitControls, RoomEnvironment: c.RoomEnvironment, RoundedBoxGeometry: d.RoundedBoxGeometry, BGU };
+  } catch (e) {
+    console.warn('three.js CDN unavailable, using local copy', e);
+    return await import(new URL('vendor/three-bundle.js', document.baseURI).href);
+  }
+}
+async function initViewer() {
+  let THREE, GLTFLoader, OrbitControls, RoomEnvironment, RoundedBoxGeometry, BGU;
+  try {
+    ({ THREE, GLTFLoader, OrbitControls, RoomEnvironment, RoundedBoxGeometry, BGU } = await loadThree());
+  } catch (e) { console.warn('3D viewer unavailable', e); viewerError = 'The 3D engine could not load.'; return null; }
+
+  const canvas = $('#c3d'), stage = $('#stage');
+  let renderer;
+  try { renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true }); }
+  catch (e) { console.warn('WebGL unavailable', e); return null; }
+  renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.05;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  const scene = new THREE.Scene();
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+  const camera = new THREE.PerspectiveCamera(32, 1, 0.005, 20);
+  const controls = new OrbitControls(camera, canvas);
+  controls.enableDamping = true; controls.dampingFactor = 0.08; controls.enablePan = false;
+  controls.maxPolarAngle = Math.PI * 0.53; controls.rotateSpeed = 0.7;
+
+  const key = new THREE.DirectionalLight(0xffffff, 2.2);
+  key.position.set(-0.6, 1.4, 0.8); key.castShadow = true;
+  key.shadow.mapSize.set(2048, 2048); key.shadow.radius = 6; key.shadow.bias = -0.0004;
+  scene.add(key, key.target);
+  const rim = new THREE.DirectionalLight(0xcfe3ff, 1.4); rim.position.set(0.8, 0.6, -1.2); scene.add(rim);
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x404650, 0.5));
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(4, 4), new THREE.ShadowMaterial({ opacity: 0.35 }));
+  ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
+  const blobTex = (() => { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+    const r = g.createRadialGradient(64, 64, 0, 64, 64, 64); r.addColorStop(0, 'rgba(0,0,0,.55)'); r.addColorStop(1, 'rgba(0,0,0,0)');
+    g.fillStyle = r; g.fillRect(0, 0, 128, 128); return new THREE.CanvasTexture(c); })();
+  const blob = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: blobTex, transparent: true, depthWrite: false }));
+  blob.rotation.x = -Math.PI / 2; scene.add(blob);
+
+  /* materials */
+  const carbonTex = (() => {
+    const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d'); const n = 8, s = 256 / n;
+    for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+      const h = ((i + j) % 4) < 2, x = i * s, y = j * s;
+      const gr = h ? g.createLinearGradient(x, y, x, y + s) : g.createLinearGradient(x, y, x + s, y);
+      gr.addColorStop(0, '#040506'); gr.addColorStop(0.5, '#25282d'); gr.addColorStop(1, '#040506');
+      g.fillStyle = gr; g.fillRect(x, y, s, s);
+      g.strokeStyle = 'rgba(255,255,255,.05)'; g.lineWidth = 1;
+      for (let k = 3; k < s; k += 4) { g.beginPath(); if (h) { g.moveTo(x, y + k); g.lineTo(x + s, y + k); } else { g.moveTo(x + k, y); g.lineTo(x + k, y + s); } g.stroke(); }
+    }
+    const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.colorSpace = THREE.SRGBColorSpace;
+    t.anisotropy = renderer.capabilities.getMaxAnisotropy(); return t;
+  })();
+  const M = {
+    carbon: new THREE.MeshPhysicalMaterial({ map: carbonTex, color: 0xffffff, roughness: 0.55, metalness: 0, clearcoat: 0.12, clearcoatRoughness: 0.35, envMapIntensity: 0.14 }),
+    anod: new THREE.MeshStandardMaterial({ color: 0xf78d28, metalness: 0.85, roughness: 0.32 }),
+    dark: new THREE.MeshStandardMaterial({ color: 0x1b1d21, metalness: 0.7, roughness: 0.38 }),
+    bell: new THREE.MeshStandardMaterial({ color: 0x2a2d33, metalness: 0.9, roughness: 0.3 }),
+    steel: new THREE.MeshStandardMaterial({ color: 0xc4c8ce, metalness: 1, roughness: 0.25 }),
+    black: new THREE.MeshStandardMaterial({ color: 0x141518, metalness: 0.2, roughness: 0.6, envMapIntensity: 0.6 }),
+    pcb: new THREE.MeshStandardMaterial({ color: 0x0f1a14, metalness: 0.1, roughness: 0.55 }),
+    gold: new THREE.MeshStandardMaterial({ color: 0xd4a640, metalness: 1, roughness: 0.3 }),
+    chip: new THREE.MeshStandardMaterial({ color: 0x24262a, metalness: 0.1, roughness: 0.45 }),
+    glass: new THREE.MeshPhysicalMaterial({ color: 0x0b1a33, metalness: 0.3, roughness: 0.05, clearcoat: 1, clearcoatRoughness: 0.02 }),
+    germ: new THREE.MeshPhysicalMaterial({ color: 0x1a1420, metalness: 0.6, roughness: 0.12, iridescence: 1, iridescenceIOR: 1.6, iridescenceThicknessRange: [200, 600], clearcoat: 1 }),
+    prop: new THREE.MeshPhysicalMaterial({ color: 0x1a1c20, metalness: 0, roughness: 0.45, clearcoat: 0.15, envMapIntensity: 0.3, transparent: true, opacity: 0.94 }),
+    alu: new THREE.MeshStandardMaterial({ color: 0x8d939b, metalness: 0.95, roughness: 0.35 }),
+    white: new THREE.MeshStandardMaterial({ color: 0xe9e8e3, metalness: 0, roughness: 0.55 }),
+    ceramic: new THREE.MeshStandardMaterial({ color: 0xc7b28a, metalness: 0, roughness: 0.7 }),
+    rubber: new THREE.MeshStandardMaterial({ color: 0x0f1012, metalness: 0, roughness: 0.9 }),
+    gpsN: new THREE.MeshStandardMaterial({ color: 0x5b626c, metalness: 0.3, roughness: 0.5 }),
+    gpsX: new THREE.MeshStandardMaterial({ color: 0x1c1d20, metalness: 0.2, roughness: 0.5 }),
+    thN: new THREE.MeshStandardMaterial({ color: 0x59606b, metalness: 0.75, roughness: 0.35 }),
+    thX: new THREE.MeshStandardMaterial({ color: 0x1e1f23, metalness: 0.5, roughness: 0.4 }),
+    ring: new THREE.MeshStandardMaterial({ color: 0xc9a24a, metalness: 1, roughness: 0.3 }),
+  };
+  M.top = M.carbon.clone();
+
+  function boxUV(geo, scale) {
+    const p = geo.attributes.position, uv = new Float32Array(p.count * 2);
+    const a = new THREE.Vector3(), b = new THREE.Vector3(), c = new THREE.Vector3(), n = new THREE.Vector3();
+    for (let i = 0; i < p.count; i += 3) {
+      a.fromBufferAttribute(p, i); b.fromBufferAttribute(p, i + 1); c.fromBufferAttribute(p, i + 2);
+      n.subVectors(c, b).cross(a.clone().sub(b)); const ax = Math.abs(n.x), ay = Math.abs(n.y), az = Math.abs(n.z);
+      for (let k = 0; k < 3; k++) {
+        const v = [a, b, c][k];
+        const [u, w] = ay >= ax && ay >= az ? [v.x, v.z] : ax >= az ? [v.z, v.y] : [v.x, v.y];
+        uv[(i + k) * 2] = u / scale; uv[(i + k) * 2 + 1] = w / scale;
+      }
+    }
+    geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  }
+
+  /* frame loading */
+  const loader = new GLTFLoader();
+  const frameCache = {};
+  // Model files are glTF JSON with the geometry embedded as base64. Unpack it here and
+  // hand three.js a GLB, so nothing has to fetch a data: URL (some hosts block that).
+  async function fetchModel(url) {
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(`${url}: HTTP ${r.status}`);
+    const buf = await r.arrayBuffer();
+    if (new DataView(buf).getUint32(0, true) === 0x46546C67) return buf; // already binary .glb
+    const json = JSON.parse(new TextDecoder().decode(buf));
+    const uri = json.buffers?.[0]?.uri || '';
+    const m = uri.match(/^data:[^;]*;base64,(.*)$/);
+    if (!m) return buf;
+    const bin = Uint8Array.from(atob(m[1]), c => c.charCodeAt(0));
+    json.buffers[0] = { byteLength: bin.length };
+    const js = new TextEncoder().encode(JSON.stringify(json));
+    const jp = (4 - js.length % 4) % 4, bp = (4 - bin.length % 4) % 4;
+    const total = 12 + 8 + js.length + jp + 8 + bin.length + bp;
+    const out = new ArrayBuffer(total), dv = new DataView(out), u8 = new Uint8Array(out);
+    dv.setUint32(0, 0x46546C67, true); dv.setUint32(4, 2, true); dv.setUint32(8, total, true);
+    dv.setUint32(12, js.length + jp, true); dv.setUint32(16, 0x4E4F534A, true);
+    u8.set(js, 20); u8.fill(0x20, 20 + js.length, 20 + js.length + jp);
+    const o = 20 + js.length + jp;
+    dv.setUint32(o, bin.length + bp, true); dv.setUint32(o + 4, 0x004E4942, true); u8.set(bin, o + 8);
+    return out;
+  }
+  function loadFrame(url) {
+    if (!frameCache[url]) frameCache[url] = fetchModel(url).then(buf => new Promise((res, rej) => loader.parse(buf, '', gltf => {
+      const grp = new THREE.Group();
+      gltf.scene.updateMatrixWorld(true);
+      gltf.scene.traverse(o => {
+        if (!o.isMesh) return;
+        let geo = o.geometry.clone(); geo.applyMatrix4(o.matrixWorld);
+        geo.deleteAttribute('normal'); if (geo.attributes.uv) geo.deleteAttribute('uv');
+        geo = BGU.toCreasedNormals(geo, Math.PI / 5);
+        const kind = o.name.toLowerCase();
+        let mat = M.carbon;
+        if (kind.startsWith('metal')) mat = M.anod;
+        else { boxUV(geo, 0.016); if (kind.startsWith('top')) mat = M.top; }
+        const mesh = new THREE.Mesh(geo, mat); mesh.castShadow = true; mesh.receiveShadow = true; mesh.name = kind;
+        grp.add(mesh);
+      });
+      res(grp);
+    }, rej)));
+    frameCache[url].catch(() => { delete frameCache[url]; });
+    return frameCache[url];
+  }
+
+  /* procedural parts */
+  const cyl = (rt, rb, h, mat, seg = 32) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat); m.castShadow = true; return m; };
+  const box = (x, y, z, mat, r = 0) => { const m = new THREE.Mesh(r ? new RoundedBoxGeometry(x, y, z, 3, r) : new THREE.BoxGeometry(x, y, z), mat); m.castShadow = true; return m; };
+  function between(a, b, r, mat) {
+    const d = new THREE.Vector3().subVectors(b, a), m = cyl(r, r, d.length(), mat, 12);
+    m.position.copy(a).addScaledVector(d, 0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); return m;
+  }
+  const bladeGeo = (() => {
+    const s = new THREE.Shape();
+    s.moveTo(0, -0.05);
+    s.splineThru([new THREE.Vector2(0.25, -0.058), new THREE.Vector2(0.6, -0.055), new THREE.Vector2(0.88, -0.04), new THREE.Vector2(0.995, -0.01)]);
+    s.splineThru([new THREE.Vector2(0.97, 0.03), new THREE.Vector2(0.8, 0.075), new THREE.Vector2(0.45, 0.115), new THREE.Vector2(0.15, 0.1), new THREE.Vector2(0, 0.07)]);
+    s.lineTo(0, -0.05);
+    const g = new THREE.ExtrudeGeometry(s, { depth: 0.012, bevelEnabled: false, curveSegments: 20 });
+    g.translate(0, 0, -0.006); g.rotateX(-Math.PI / 2); return g;
+  })();
+  function makeMotor(R, H) {
+    const g = new THREE.Group();
+    const base = cyl(R * 0.92, R * 0.96, H * 0.22, M.dark, 40); base.position.y = H * 0.11;
+    const bell = cyl(R, R, H * 0.62, M.bell, 48); bell.position.y = H * 0.22 + H * 0.31;
+    const band = cyl(R * 1.012, R * 1.012, H * 0.12, M.anod, 48); band.position.y = H * 0.78;
+    const cap = cyl(R * 0.55, R * 0.8, H * 0.08, M.bell, 40); cap.position.y = H * 0.88;
+    const shaft = cyl(R * 0.12, R * 0.12, H * 0.32, M.steel, 16); shaft.position.y = H * 1.0;
+    g.add(base, bell, band, cap, shaft); return g;
+  }
+  function makeProp(R, dir) {
+    const g = new THREE.Group();
+    for (let i = 0; i < 3; i++) {
+      const b = new THREE.Mesh(bladeGeo, M.prop); b.castShadow = true;
+      b.scale.setScalar(R); b.rotation.order = 'YXZ'; b.rotation.y = i * Math.PI * 2 / 3 + dir * 0.3; b.rotation.x = 0.2 * dir;
+      g.add(b);
+    }
+    const hub = cyl(R * 0.1, R * 0.11, R * 0.09, M.prop, 24); g.add(hub);
+    const nut = cyl(R * 0.045, R * 0.06, R * 0.08, M.anod, 6); nut.position.y = R * 0.07; g.add(nut);
+    if (dir < 0) g.scale.x = -1;
+    return g;
+  }
+  function makeStack(r) {
+    const g = new THREE.Group(), S = 0.036;
+    const esc = box(S, 0.0016, S, M.pcb); esc.position.y = 0.006;
+    const fc = box(S, 0.0016, S, M.pcb); fc.position.y = 0.0145;
+    g.add(esc, fc);
+    for (const [x, z] of [[1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+      const gr = cyl(0.0028, 0.0028, 0.004, M.rubber, 16); gr.position.set(x * 0.01525, 0.003, z * 0.01525); g.add(gr);
+      const bolt = cyl(0.0013, 0.0013, 0.015, M.steel, 10); bolt.position.set(x * 0.01525, 0.01, z * 0.01525); g.add(bolt);
+      const fet = box(0.006, 0.0012, 0.005, M.chip); fet.position.set(x * 0.008, 0.0072, z * 0.004); g.add(fet);
+      const pad = box(0.004, 0.0004, 0.006, M.gold); pad.position.set(x * 0.0155, 0.0067, z * 0.006); g.add(pad);
+    }
+    const mcu = box(0.010, 0.0014, 0.010, M.chip); mcu.position.set(0, 0.0158, 0); g.add(mcu);
+    const imu = box(0.003, 0.001, 0.003, M.chip); imu.position.set(0.009, 0.0155, -0.008); g.add(imu);
+    const cap = cyl(0.005, 0.005, 0.013, M.black, 20); cap.rotation.x = Math.PI / 2; cap.position.set(0.006, 0.006, -0.026); g.add(cap);
+    const capTop = cyl(0.0051, 0.0051, 0.0015, M.alu, 20); capTop.rotation.x = Math.PI / 2; capTop.position.set(0.006, 0.006, -0.0328); g.add(capTop);
+    g.position.set(0, r.stackY, r.stackZ); return g;
+  }
+  function makeCamera(id, sz) {
+    const g = new THREE.Group();
+    if (id === 'thn' || id === 'thx') {
+      const body = box(sz, sz, 0.028, id === 'thn' ? M.thN.clone() : M.thX.clone(), 0.0015); g.add(body);
+      const bez = cyl(sz * 0.42, sz * 0.44, 0.005, M.dark, 32); bez.rotation.x = Math.PI / 2; bez.position.z = 0.016; g.add(bez);
+      const lens = cyl(sz * 0.34, sz * 0.34, 0.002, M.germ, 32); lens.rotation.x = Math.PI / 2; lens.position.z = 0.0186; g.add(lens);
+      const fins = box(sz * 0.8, sz * 0.8, 0.003, M.dark); fins.position.z = -0.0155; g.add(fins);
+    } else {
+      const body = box(sz, sz, 0.018, M.black.clone(), 0.0015); g.add(body);
+      const big = id === 'dn';
+      const barrel = cyl(sz * (big ? 0.39 : 0.34), sz * (big ? 0.39 : 0.34), big ? 0.012 : 0.009, M.dark.clone(), 32);
+      barrel.rotation.x = Math.PI / 2; barrel.position.z = 0.009 + (big ? 0.006 : 0.0045); g.add(barrel);
+      if (big) { const ring = cyl(sz * 0.4, sz * 0.4, 0.0018, M.ring, 32); ring.rotation.x = Math.PI / 2; ring.position.z = 0.0185; g.add(ring); }
+      const glass = cyl(sz * 0.27, sz * 0.27, 0.001, M.glass, 32); glass.rotation.x = Math.PI / 2; glass.position.z = 0.009 + (big ? 0.0122 : 0.0092); g.add(glass);
+    }
+    for (const x of [-1, 1]) { const sc = cyl(0.0016, 0.0016, 0.001, M.steel, 12); sc.rotation.z = Math.PI / 2; sc.position.set(x * (sz / 2 + 0.0004), 0, 0); g.add(sc); }
+    return g;
+  }
+  function makeCameras(s, r) {
+    const g = new THREE.Group(), mid = (r.cageLo + r.cageHi) / 2, h = r.cageHi - r.cageLo;
+    if (!s.cam2) { const c = makeCamera(s.cam1, 0.019); c.position.set(0, mid, r.camZ); c.rotation.x = -0.32; g.add(c); }
+    else {
+      const sz = Math.min(0.019, h / 2 - 0.0005);
+      const a = makeCamera(s.cam1, sz); a.position.set(0, r.cageHi - sz / 2 - 0.0003, r.camZ); a.rotation.x = -0.22; g.add(a);
+      const b = makeCamera(s.cam2, sz); b.position.set(0, r.cageLo + sz / 2 + 0.0003, r.camZ - 0.002); b.rotation.x = -0.05; g.add(b);
+    }
+    return g;
+  }
+  const spinners = [];
+  function makeVTX(id, r) {
+    const g = new THREE.Group(), W = 0.026;
+    if (id === '2w5') {
+      const base = box(W, 0.004, W, M.alu.clone()); base.position.y = 0.002; g.add(base);
+      for (let i = -3; i <= 3; i++) { const f = box(0.0012, 0.006, W, M.alu.clone()); f.position.set(i * 0.0036, 0.007, 0); g.add(f); }
+      const shroud = cyl(0.0105, 0.0105, 0.004, M.black.clone(), 32); shroud.position.y = 0.012; g.add(shroud);
+      const fan = new THREE.Group(); fan.position.y = 0.0142;
+      for (let i = 0; i < 7; i++) { const bl = box(0.0085, 0.0006, 0.003, M.dark); bl.position.x = 0.0048; const p = new THREE.Group(); p.rotation.y = i * Math.PI * 2 / 7; bl.rotation.x = 0.4; p.add(bl); fan.add(p); }
+      fan.add(cyl(0.003, 0.003, 0.001, M.anod, 20)); g.add(fan); spinners.push(fan);
+    } else {
+      const shell = box(W, 0.008, W, M.alu.clone(), 0.0012); shell.position.y = 0.004; g.add(shell);
+      const lid = box(W * 0.7, 0.0004, W * 0.5, M.anod); lid.position.y = 0.0082; g.add(lid);
+    }
+    g.position.set(0, r.vtxY, r.vtxZ);
+    const out = new THREE.Group(); out.add(g);
+    const a = new THREE.Vector3(0, r.vtxY + 0.005, r.rearZ + 0.004);
+    const L = r.antLen * 0.6, d = new THREE.Vector3(0, 0.62, -0.78).normalize();
+    const b = a.clone().addScaledVector(d, L);
+    out.add(between(a, b, 0.0016, M.black.clone()));
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.0085, 24, 16), M.black.clone()); head.scale.set(1, 0.62, 1); head.position.copy(b); head.castShadow = true; out.add(head);
+    const cap = cyl(0.0045, 0.0045, 0.0025, M.anod, 20); cap.position.copy(b).add(new THREE.Vector3(0, 0.0055, 0)); out.add(cap);
+    return out;
+  }
+  function makeRx(id, r) {
+    const g = new THREE.Group(), dual = id === 'gem' || id === 'crsfd', elrs = id === 'gem' || id === 'elrs';
+    for (const s of dual ? [-1, 1] : [1]) {
+      const a = new THREE.Vector3(s * r.antX, r.antY, r.antZ);
+      const d = new THREE.Vector3(s * 0.55, -0.12, -0.83).normalize();
+      const b = a.clone().addScaledVector(d, r.antLen * 0.55);
+      g.add(between(a, b, 0.0009, M.black.clone()));
+      if (elrs) {
+        const c = b.clone().addScaledVector(d, r.antLen * 0.45);
+        g.add(between(b, c, 0.0026, M.white.clone()));
+      } else {
+        const c = b.clone().addScaledVector(d, r.antLen * 0.32);
+        g.add(between(b, c, 0.0009, M.black.clone()));
+        const perp = new THREE.Vector3().crossVectors(d, new THREE.Vector3(0, 1, 0)).normalize();
+        g.add(between(c.clone().addScaledVector(perp, -0.016), c.clone().addScaledVector(perp, 0.016), 0.0012, M.black.clone()));
+      }
+    }
+    return g;
+  }
+  function makeGPS(id, r) {
+    const g = new THREE.Group(), mastH = r.propR > 0.1 ? 0.024 : 0.014;
+    const mast = cyl(0.0022, 0.0022, mastH, M.anod, 16); mast.position.y = mastH / 2; g.add(mast);
+    const puck = box(0.025, 0.008, 0.025, (id === 'gpsn' ? M.gpsN : M.gpsX).clone(), 0.002); puck.position.y = mastH + 0.004; g.add(puck);
+    const patch = box(0.018, 0.0016, 0.018, M.ceramic.clone()); patch.position.y = mastH + 0.0086; g.add(patch);
+    const dot = box(0.006, 0.0004, 0.006, M.steel); dot.position.y = mastH + 0.0096; g.add(dot);
+    g.position.set(0, r.topY, r.gpsZ); return g;
+  }
+
+  /* scene state */
+  const root = new THREE.Group(); scene.add(root);
+  let rigKey = null, rig = null, frame = null, fixed = null, D = 1, center = new THREE.Vector3();
+  const parts = { cams: null, vtx: null, rx: null, gps: null };
+  let lastS = null, wanted = null, anim = null, pulse = null, fade = { cur: 1, to: 1 };
+
+  function setPart(name, obj) {
+    if (parts[name]) { root.remove(parts[name]); disposeTree(parts[name]); }
+    parts[name] = obj; if (obj) root.add(obj);
+  }
+  function disposeTree(o) { o.traverse(x => { if (x.isMesh && x.geometry !== bladeGeo) x.geometry.dispose(); }); }
+
+  function fit() {
+    const b = new THREE.Box3().setFromObject(root), sph = b.getBoundingSphere(new THREE.Sphere());
+    center.copy(sph.center); center.y = (b.min.y + b.max.y) / 2;
+    D = sph.radius / Math.sin(THREE.MathUtils.degToRad(camera.fov / 2)) * 0.92;
+    controls.minDistance = D * 0.22; controls.maxDistance = D * 2.2;
+    ground.position.y = rig.groundY - 0.0004; blob.position.y = rig.groundY - 0.0002;
+    blob.scale.setScalar(sph.radius * 2.2);
+    const sc = key.shadow.camera, e = sph.radius * 1.2;
+    sc.left = -e; sc.right = e; sc.top = e; sc.bottom = -e; sc.near = 0.05; sc.far = 4; sc.updateProjectionMatrix();
+    key.target.position.copy(center); key.position.copy(center).add(new THREE.Vector3(-0.6, 1.4, 0.8).multiplyScalar(sph.radius * 3));
+  }
+
+  const PRESETS = {
+    overview: { az: -38, el: 22, d: 0.86, t: 'center' },
+    front: { az: 0, el: 8, d: 0.95, t: 'center' },
+    top: { az: 0, el: 84, d: 1.05, t: 'center' },
+    rear: { az: 180, el: 16, d: 1.0, t: 'center' },
+    stack: { az: -28, el: 58, d: 0.52, t: 'stack', fade: true },
+    camera: { az: -14, el: 14, d: 0.4, t: 'cam' },
+    vtx: { az: 205, el: 34, d: 0.52, t: 'vtx', fade: true },
+    c2: { az: 150, el: 16, d: 0.62, t: 'rear' },
+    gps: { az: 200, el: 30, d: 0.5, t: 'gps' },
+  };
+  function targetFor(t) {
+    const r = rig;
+    switch (t) {
+      case 'stack': return new THREE.Vector3(0, r.stackY + 0.01, r.stackZ);
+      case 'cam': return new THREE.Vector3(0, (r.cageLo + r.cageHi) / 2, r.camZ - 0.01);
+      case 'vtx': return new THREE.Vector3(0, r.vtxY + 0.01, r.vtxZ - 0.01);
+      case 'rear': return new THREE.Vector3(0, r.antY, r.rearZ - 0.02);
+      case 'gps': return new THREE.Vector3(0, r.topY + 0.015, r.gpsZ);
+      default: return center.clone();
+    }
+  }
+  function placeCamera(p, instant) {
+    const to = { r: D * p.d, az: THREE.MathUtils.degToRad(p.az), el: THREE.MathUtils.degToRad(p.el), t: targetFor(p.t) };
+    fade.to = p.fade ? 0.18 : 1;
+    if (instant || reduceMotion) { setSph(to.t, to.r, to.az, to.el); anim = null; return; }
+    const off = camera.position.clone().sub(controls.target), r0 = off.length();
+    const from = { r: r0, az: Math.atan2(off.x, off.z), el: Math.asin(THREE.MathUtils.clamp(off.y / r0, -1, 1)), t: controls.target.clone() };
+    let dAz = to.az - from.az; dAz = ((dAz + Math.PI) % (Math.PI * 2) + Math.PI * 2) % (Math.PI * 2) - Math.PI;
+    anim = { t0: performance.now(), dur: 1100, from, to, dAz };
+  }
+  function setSph(t, r, az, el) {
+    controls.target.copy(t);
+    camera.position.set(t.x + r * Math.sin(az) * Math.cos(el), t.y + r * Math.sin(el), t.z + r * Math.cos(az) * Math.cos(el));
+    camera.lookAt(t); dirty = true;
+  }
+
+  const hint = $('#hint');
+  let dirty = true, spinUntil = 0;
+  const invalidate = () => { dirty = true; };
+  controls.addEventListener('start', () => { anim = null; hint.classList.add('gone'); });
+  controls.addEventListener('change', invalidate);
+
+  async function ensureRig(s) {
+    const sz = sizeOf(s.size);
+    if (!sz.model || sz.image) return false;
+    if (rigKey === sz.model) return true;
+    const loading = $('#loading'); loading.hidden = false;
+    let grp;
+    try { grp = await loadFrame(sz.model); }
+    catch (e) { console.warn('model load failed', e); loading.hidden = true; modelFailed[sz.model] = true; refreshPlaceholder(); return false; }
+    loading.hidden = true;
+    if (sizeOf(state.size).model !== sz.model) return false;
+    if (frame) root.remove(frame);
+    if (fixed) root.remove(fixed);
+    for (const k in parts) setPart(k, null);
+    rigKey = sz.model; rig = RIGS[sz.model]; frame = grp; root.add(frame);
+    fixed = new THREE.Group();
+    rig.motors.forEach(([x, z], i) => {
+      const m = makeMotor(rig.motorR, rig.motorH); m.position.set(x, 0, z); fixed.add(m);
+      const dir = (x > 0) === (z > 0) ? 1 : -1;
+      const p = makeProp(rig.propR, dir); p.position.set(x, rig.motorH * 1.12, z); fixed.add(p);
+    });
+    fixed.add(makeStack(rig));
+    root.add(fixed);
+    lastS = null;
+    return 'new';
+  }
+
+  async function update(s, opts = {}) {
+    wanted = { s, opts };
+    refreshPlaceholder();
+    const r = await ensureRig(s);
+    if (!r || wanted.s !== s) return;
+    const fresh = r === 'new', p = lastS || {};
+    const changed = [];
+    if (fresh || p.cam1 !== s.cam1 || p.cam2 !== s.cam2) { setPart('cams', makeCameras(s, rig)); changed.push('cams'); }
+    if (fresh || p.vtx !== s.vtx) { spinners.length = 0; setPart('vtx', makeVTX(s.vtx, rig)); changed.push('vtx'); spinUntil = performance.now() + 8000; }
+    if (fresh || p.c2 !== s.c2) { setPart('rx', makeRx(s.c2, rig)); changed.push('rx'); }
+    if (fresh || p.gps !== s.gps) { setPart('gps', s.gps === 'none' ? null : makeGPS(s.gps, rig)); changed.push('gps'); }
+    root.traverse(o => { if (o.isMesh) { o.castShadow = true; } });
+    lastS = { ...s }; invalidate();
+    if (fresh) { fit(); placeCamera(PRESETS.overview, true); placeCamera(PRESETS[opts.focus] || PRESETS.overview, !opts.focus); restyle(); }
+    else if (opts.focus) placeCamera(PRESETS[opts.focus]);
+    if (!fresh) {
+      const meshes = [];
+      for (const k of changed) parts[k]?.traverse(o => { if (o.isMesh && o.material && 'emissive' in o.material && !Object.values(M).includes(o.material)) meshes.push(o); });
+      if (meshes.length) pulse = { t0: performance.now(), meshes };
+    }
+  }
+
+  function restyle() {
+    const cs = getComputedStyle(document.documentElement);
+    M.anod.color.set(cs.getPropertyValue('--anod').trim() || '#f78d28'); invalidate();
+    ground.material.opacity = parseFloat(cs.getPropertyValue('--shadow')) || 0.4;
+    blob.material.opacity = ground.material.opacity * 1.2;
+    const sel = cs.getPropertyValue('--sel').trim() || '#f78d28';
+    pulseColor.set(sel);
+  }
+  const pulseColor = new THREE.Color(0xf78d28);
+
+  /* render loop */
+  function resize() {
+    const w = stage.clientWidth, h = stage.clientHeight;
+    if (!w || !h) return;
+    dirty = true;
+    renderer.setSize(w, h, false); camera.aspect = w / h;
+    camera.fov = w / h < 0.9 ? 42 : 32; camera.updateProjectionMatrix();
+  }
+  new ResizeObserver(resize).observe(stage); resize();
+  const ease = k => k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+  let running = true;
+  document.addEventListener('visibilitychange', () => { running = !document.hidden; if (running) requestAnimationFrame(loop); });
+  function loop(now) {
+    if (!running) return;
+    if (anim) {
+      const k = ease(Math.min(1, (now - anim.t0) / anim.dur)), f = anim.from, t = anim.to;
+      setSph(new THREE.Vector3().lerpVectors(f.t, t.t, k), f.r + (t.r - f.r) * k, f.az + anim.dAz * k, f.el + (t.el - f.el) * k);
+      if (k >= 1) { anim = null; dirty = true; }
+    }
+    if (Math.abs(fade.cur - fade.to) > 0.005) {
+      fade.cur += (fade.to - fade.cur) * 0.12;
+      M.top.transparent = fade.cur < 0.99; M.top.opacity = fade.cur; M.top.depthWrite = fade.cur > 0.6; M.top.needsUpdate = true;
+    }
+    if (pulse) {
+      const k = (now - pulse.t0) / 1400; dirty = true;
+      const v = k >= 1 ? 0 : Math.sin(Math.min(1, k) * Math.PI) * 0.9;
+      for (const m of pulse.meshes) { m.material.emissive.copy(pulseColor); m.material.emissiveIntensity = v; }
+      if (k >= 1) pulse = null;
+    }
+    const spinning = spinners.length && !reduceMotion && now < spinUntil;
+    if (spinning) for (const s of spinners) s.rotation.y += 0.18;
+    const moved = controls.update();
+    if (dirty || moved || anim || pulse || spinning || Math.abs(fade.cur - fade.to) > 0.005) { renderer.render(scene, camera); dirty = false; }
+    requestAnimationFrame(loop);
+  }
+  requestAnimationFrame(loop);
+
+  $('#views').addEventListener('click', e => { const b = e.target.closest('[data-view]'); if (b && rig) placeCamera(PRESETS[b.dataset.view]); });
+  window.__madkViewer = { M, invalidate, renderer, scene, camera };
+
+  // trims empty space around the drone so the spec sheet image is tight
+  function cropped(src) {
+    const k = Math.min(1, 1400 / src.width), w = Math.round(src.width * k), h = Math.round(src.height * k);
+    const c = document.createElement('canvas'); c.width = w; c.height = h;
+    const g = c.getContext('2d'); g.drawImage(src, 0, 0, w, h);
+    const d = g.getImageData(0, 0, w, h).data;
+    let x0 = w, y0 = h, x1 = 0, y1 = 0;
+    for (let y = 0; y < h; y += 2) for (let x = 0; x < w; x += 2) if (d[(y * w + x) * 4 + 3] > 40) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (x1 <= x0) return src.toDataURL('image/png');
+    const pad = Math.round(Math.max(x1 - x0, y1 - y0) * 0.05);
+    x0 = Math.max(0, x0 - pad); y0 = Math.max(0, y0 - pad); x1 = Math.min(w, x1 + pad); y1 = Math.min(h, y1 + pad);
+    const o = document.createElement('canvas'); o.width = x1 - x0; o.height = y1 - y0;
+    o.getContext('2d').drawImage(c, x0, y0, o.width, o.height, 0, 0, o.width, o.height);
+    return o.toDataURL('image/png');
+  }
+
+  return {
+    update,
+    restyle,
+    snapshot() {
+      const sz = sizeOf(state.size); if (!sz.model || sz.image || !rig) return null;
+      const pos = camera.position.clone(), tgt = controls.target.clone(), topOp = M.top.opacity, topTr = M.top.transparent;
+      try {
+        const p = PRESETS.overview;
+        setSph(targetFor(p.t), D * p.d, THREE.MathUtils.degToRad(p.az), THREE.MathUtils.degToRad(p.el));
+        blob.visible = false; M.top.opacity = 1; M.top.transparent = false;
+        renderer.render(scene, camera);
+        return cropped(renderer.domElement);
+      } catch (e) { return null; }
+      finally {
+        blob.visible = true; M.top.opacity = topOp; M.top.transparent = topTr;
+        camera.position.copy(pos); controls.target.copy(tgt); camera.lookAt(tgt); dirty = true;
+      }
+    },
+  };
+}
+
+/* ---------- boot ---------- */
+buildUI();
+setupQuote();
+setupShare();
+setupSheet();
+$$('dialog').forEach(d => d.addEventListener('click', e => { if (e.target.closest('[data-close]') || e.target === d) d.close(); }));
+const fromHash = parseCode(location.hash);
+if (fromHash) { state = normalize(fromHash, []); }
+setupStyles();
+render();
+refreshPlaceholder();
+window.addEventListener('hashchange', () => {
+  const s = parseCode(location.hash);
+  if (s && codeOf(s) !== codeOf(state)) { state = normalize({ ...s, ndaaOnly: state.ndaaOnly }, []); render(); viewer?.update(state, {}); }
+});
+initViewer().then(v => {
+  viewer = v;
+  viewerStatus = v ? 'ready' : 'failed';
+  $('#loading').hidden = true;
+  refreshPlaceholder();
+  if (v) { v.restyle(); v.update(state, {}); }
+});
+// test hook
+window.__madk = { get state() { return state; }, choose, priceLines, codeOf, parseCode, normalize };
+</script>
+
+</body>
+</html>
